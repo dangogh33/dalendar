@@ -260,7 +260,7 @@ st.set_page_config(page_title="The Dalendar", layout="wide")
 st.title(f"The Dalendar for {datetime.datetime.now().year}")
 
 # Add some interactive controls
-col1, col2 = st.columns([1, 3])
+col2 = st.columns([3])
 
 # with col1:
     # year = st.number_input("Year", min_value=2020, max_value=2030, value=2025)
@@ -276,7 +276,7 @@ col1, col2 = st.columns([1, 3])
 
 # Create the calendar
 today = datetime.date.today()
-fig = create_circular_calendar(year=today.year, current_date=today, figsize=(6,6))
+fig = create_circular_calendar(year=today.year, current_date=today, figsize=(12,12))
 
 # Display the calendar
 with col2:

@@ -11,15 +11,52 @@ import matplotlib.pyplot as plt
 import numpy as np
 import datetime
 from matplotlib.patches import Wedge, Circle, Rectangle
+import calendar
+import pytz  # For timezone handling
+
+def get_today_central():
+    """Get the current date in US Central timezone."""
+    central = pytz.timezone('US/Central')
+    now = datetime.datetime.now(central)
+    return now.date()
+
+def is_leap_day(date):
+    """Check if a date is February 29 (leap day)."""
+    return date.month == 2 and date.day == 29
+
+def is_leap_year(year):
+    """Check if the given year is a leap year."""
+    return calendar.isleap(year)
+
+def calculate_weeks_needed(year, start_date=None):
+    """Calculate the number of weeks needed to reach December 31st."""
+    if start_date is None:
+        # Find the Monday on or before January 1
+        jan1 = datetime.date(year, 1, 1)
+        day_of_week = jan1.weekday()  # 0 for Monday, 6 for Sunday
+        start_date = jan1 - datetime.timedelta(days=day_of_week)
+    
+    # Find December 31st
+    dec31 = datetime.date(year, 12, 31)
+    
+    # Calculate days from start to December 31st
+    days_diff = (dec31 - start_date).days
+    
+    # Calculate weeks needed (add 1 to include the final week)
+    weeks_needed = (days_diff // 7) + 1
+    
+    return weeks_needed
 
 def create_circular_calendar(year=2025, start_date=None, current_date=None, figsize=(14,14)):
-    # If no start_date provided, use January 1st of the given year
+    # If no start_date provided, use Monday on or before January 1st
     if start_date is None:
-        start_date = datetime.date(year, 1, 1)
+        jan1 = datetime.date(year, 1, 1)
+        day_of_week = jan1.weekday()  # 0 for Monday, 6 for Sunday
+        start_date = jan1 - datetime.timedelta(days=day_of_week)
     
-    # If no current_date provided, use today's date
+    # If no current_date provided, use today's date in US Central timezone
     if current_date is None:
-        current_date = datetime.date.today()
+        current_date = get_today_central()
     
     # Colors
     bg_color = 'black'
@@ -34,12 +71,11 @@ def create_circular_calendar(year=2025, start_date=None, current_date=None, figs
     ax.set_aspect('equal')
     ax.set_facecolor(bg_color)
     
-    # Calculate total days and weeks
-    total_weeks = 13 * 4  # 13 months of 4 weeks
-    total_days = total_weeks * 7  # Each week has 7 days
+    # Calculate total weeks needed to include December 31st
+    total_weeks = calculate_weeks_needed(year, start_date)
     
-    # Calculate days since start
-    days_since_start = (current_date - start_date).days
+    # Force end date to be December 31st
+    end_date = datetime.date(year, 12, 31)
     
     # Radius parameters
     outer_radius = 10
@@ -81,26 +117,39 @@ def create_circular_calendar(year=2025, start_date=None, current_date=None, figs
         
         # Draw days within this week
         for day_idx in range(7):
+            # Calculate the actual date for this calendar position
             day_date = week_start_date + datetime.timedelta(days=day_idx)
             
+            # Skip if we're past December 31st
+            if day_date.year > year:
+                continue
+                
             # Track traditional month boundaries
             if day_date.month != current_month:
                 current_month = day_date.month
-                days_from_start = (day_date - start_date).days
-                traditional_months.append((day_date.strftime('%b'), days_from_start))
+                calendar_day = week_idx * 7 + day_idx
+                traditional_months.append((day_date.strftime('%b'), calendar_day))
             
             # Calculate radius for this day (Sunday innermost, Monday outermost)
             day_outer_radius = outer_radius - day_idx * day_radius_width
             day_inner_radius = day_outer_radius - day_radius_width
             
             # Determine color based on date
-            days_from_calendar_start = (day_date - start_date).days
-            if days_from_calendar_start < days_since_start:
-                color = completed_color  # Past day (green)
-            elif days_from_calendar_start == days_since_start:
-                color = current_color    # Current day (white)
+            # Special handling for leap day
+            if is_leap_day(day_date):
+                # For leap day, use a special color or pattern
+                if day_date == current_date:  # If today is leap day
+                    color = '#AAFFAA'  # Light green for leap day (lighter than completed)
+                else:
+                    color = '#004400'  # Darker green for leap day (darker than background)
             else:
-                color = bg_color         # Future day (black)
+                # Normal day coloring
+                if day_date < current_date:
+                    color = completed_color  # Past day (green)
+                elif day_date == current_date:
+                    color = current_color    # Current day (white)
+                else:
+                    color = bg_color         # Future day (black)
             
             # Create wedge for this day
             wedge = Wedge((0, 0), day_outer_radius, week_end_angle, week_start_angle, 
@@ -133,8 +182,8 @@ def create_circular_calendar(year=2025, start_date=None, current_date=None, figs
             next_week_idx = next_day_offset // 7
             next_angle = 90 - next_week_idx * angle_per_week
         else:
-            # For the last month, use the first month of the next year
-            next_angle = -270  # 90 degrees - 360 degrees
+            # For the last month, use the next year's first month
+            next_angle = 90 - total_weeks * angle_per_week
         
         # Make sure angles are properly ordered for midpoint calculation
         if next_angle > tick_angle:
@@ -149,8 +198,11 @@ def create_circular_calendar(year=2025, start_date=None, current_date=None, figs
         ax.text(x, y, month_name, color=trad_month_color, ha='center', va='center', 
                 fontsize=10, fontweight='bold', rotation=0)
     
+    # Calculate how many full 13-month periods we have
+    full_13_months = total_weeks // 4
+    
     # Add 13-month calendar month labels - ALWAYS HORIZONTAL
-    for month_idx in range(13):
+    for month_idx in range(full_13_months):
         month_start_week = month_idx * 4
         month_end_week = month_start_week + 4
         
@@ -182,8 +234,37 @@ def create_circular_calendar(year=2025, start_date=None, current_date=None, figs
             y2 = outer_radius * np.sin(np.radians(boundary_angle))
             ax.plot([x1, x2], [y1, y2], color='#00CC00', linestyle='-', linewidth=1)
     
-    # Add title
-    # plt.title('13-Month Circular Calendar', color=month_label_color, fontsize=20, pad=20)
+    # Handle any remaining weeks (past the last full 13-month)
+    remaining_weeks = total_weeks % 4
+    if remaining_weeks > 0:
+        # Add a label for the extra month
+        month_start_week = full_13_months * 4
+        month_end_week = total_weeks
+        
+        # Calculate angles for this partial month
+        month_start_angle = 90 - month_start_week * angle_per_week
+        month_end_angle = 90 - month_end_week * angle_per_week
+        if month_start_angle < month_end_angle:
+            month_start_angle += 360
+            
+        month_mid_angle = (month_start_angle + month_end_angle) / 2
+        
+        # Add month label
+        mid_radius = (inner_radius + outer_radius) / 2
+        month_x = mid_radius * np.cos(np.radians(month_mid_angle))
+        month_y = mid_radius * np.sin(np.radians(month_mid_angle))
+            
+        ax.text(month_x, month_y, f"M{full_13_months+1}", color=month_label_color, 
+               ha='center', va='center', fontsize=12, fontweight='bold',
+               rotation=0)
+        
+        # Draw line at the start of this extra month
+        boundary_angle = 90 - month_start_week * angle_per_week
+        x1 = inner_radius * np.cos(np.radians(boundary_angle))
+        y1 = inner_radius * np.sin(np.radians(boundary_angle))
+        x2 = outer_radius * np.cos(np.radians(boundary_angle))
+        y2 = outer_radius * np.sin(np.radians(boundary_angle))
+        ax.plot([x1, x2], [y1, y2], color='#00CC00', linestyle='-', linewidth=1)
     
     # Set limits and remove axes
     ax.set_xlim(-outer_radius-3, outer_radius+3)
@@ -222,21 +303,29 @@ def create_circular_calendar(year=2025, start_date=None, current_date=None, figs
     
     # Add current date indicator in corner
     date_str = current_date.strftime("%Y-%m-%d")
-    ax.text(-outer_radius-2.5, -outer_radius-2.5, f"TODAY: {date_str}", color='#00FF00', 
-            fontsize=10, family='monospace')
+    if is_leap_day(current_date):
+        ax.text(-outer_radius-2.5, -outer_radius-2.5, 
+                f"TODAY: {date_str}\nToday is a Leap Day! Take today to rest & rejuvenate!", 
+                color='#00FF00', fontsize=10, family='monospace')
+    else:
+        ax.text(-outer_radius-2.5, -outer_radius-2.5, f"TODAY: {date_str}", 
+                color='#00FF00', fontsize=10, family='monospace')
     
-    # Add start date indicator in opposite corner
+    # Add start date and end date indicators in opposite corner
     start_date_str = start_date.strftime("%Y-%m-%d")
-    ax.text(outer_radius-2.5, -outer_radius-2.5, f"START: {start_date_str}", color='#00FF00', 
-            fontsize=10, family='monospace', ha='right')
+    end_date_str = end_date.strftime("%Y-%m-%d")
+    ax.text(outer_radius-2.5, -outer_radius-2.5, 
+            f"START: {start_date_str}\nEND: {end_date_str}\nWEEKS: {total_weeks}", 
+            color='#00FF00', fontsize=10, family='monospace', ha='right')
     
     plt.tight_layout()
     
     return fig
 
-def monday_closest_to_jan1():
+def monday_closest_to_jan1(current_year=None):
     # Get current year
-    current_year = datetime.datetime.now().year
+    if current_year == None:
+        current_year = get_today_central().year
     
     # Create date object for January 1st of current year
     jan1 = datetime.date(current_year, 1, 1)
@@ -250,11 +339,6 @@ def monday_closest_to_jan1():
     else:  # For any other day, go backward to previous Monday
         return jan1 - datetime.timedelta(days=day_of_week)
 
-# # Create and save the calendar
-# fig = create_circular_calendar(year=datetime.datetime.now().year, start_date=monday_closest_to_jan1())
-# plt.savefig('circular_calendar.png', dpi=300, facecolor='black')
-# plt.show()
-
 # Streamlit app
 st.set_page_config(page_title="The Dalendar", layout="wide")
 st.title(f"The Dalendar for {datetime.datetime.now().year}")
@@ -262,21 +346,9 @@ st.title(f"The Dalendar for {datetime.datetime.now().year}")
 # Add some interactive controls
 _, col2, _ = st.columns([1, 3, 1])
 
-# with col1:
-    # year = st.number_input("Year", min_value=2020, max_value=2030, value=2025)
-    # today = datetime.date.today()
-    # use_today = st.checkbox("Use today's date", value=True)
-    
-    # if not use_today:
-    #     month = st.selectbox("Month", range(1, 13), today.month - 1)
-    #     day = st.selectbox("Day", range(1, 32), min(today.day - 1, 30))
-    #     selected_date = datetime.date(year, month, day)
-    # else:
-    #     selected_date = today
-
 # Create the calendar
-today = datetime.date.today()
-fig = create_circular_calendar(year=today.year, current_date=today, figsize=(12,12))
+today = get_today_central()
+fig = create_circular_calendar(year=today.year, start_date=monday_closest_to_jan1(today.year), current_date=today, figsize=(12,12))
 
 # Display the calendar
 with col2:
@@ -285,9 +357,6 @@ with col2:
 # Add explanation
 st.markdown("""
 ## About This Calendar
-This calendar divides the year into 13 months of exactly 4 weeks (28 days) each.
-- **M1-M13**: The 13 equal months
-- **W1-W52**: The 52 weeks of the year
 - **Green sections**: Completed days
 - **White section**: Current day
 """)

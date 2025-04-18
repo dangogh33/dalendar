@@ -1,3 +1,6 @@
 matplotlib
 streamlit
 numpy
+calendar
+pytz
+datetime

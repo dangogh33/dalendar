@@ -260,7 +260,7 @@ st.set_page_config(page_title="The Dalendar", layout="wide")
 st.title(f"The Dalendar for {datetime.datetime.now().year}")
 
 # Add some interactive controls
-col2 = st.columns([3])
+_, col2, _ = st.columns([1, 3, 1])
 
 # with col1:
     # year = st.number_input("Year", min_value=2020, max_value=2030, value=2025)

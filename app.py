@@ -346,7 +346,7 @@ def monday_closest_to_jan1(current_year=None):
 
 # Streamlit app
 st.set_page_config(page_title="The Dalendar", layout="wide")
-st.title(f"The Dalendar for {datetime.datetime.now().year}")
+st.title(f"{datetime.datetime.now().year} Dalendar")
 
 # Add some interactive controls
 _, col2, _ = st.columns([1, 3, 1])
@@ -362,6 +362,7 @@ with col2:
 # Add explanation
 st.markdown("""
 ## About This Calendar
+- **Dalendar** = Dan's Calendar
 - **Green sections**: Completed days
 - **White section**: Current day
 """)

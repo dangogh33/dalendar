@@ -12,7 +12,7 @@ import numpy as np
 import datetime
 from matplotlib.patches import Wedge, Circle, Rectangle
 
-def create_circular_calendar(year=2025, start_date=None, current_date=None):
+def create_circular_calendar(year=2025, start_date=None, current_date=None, figsize=(14,14)):
     # If no start_date provided, use January 1st of the given year
     if start_date is None:
         start_date = datetime.date(year, 1, 1)
@@ -30,7 +30,7 @@ def create_circular_calendar(year=2025, start_date=None, current_date=None):
     trad_month_color = '#00FFAA'  # Brighter green for traditional month outlines
     
     # Create figure
-    fig, ax = plt.subplots(figsize=(14, 14), facecolor=bg_color)
+    fig, ax = plt.subplots(figsize=figsize, facecolor=bg_color)
     ax.set_aspect('equal')
     ax.set_facecolor(bg_color)
     
@@ -183,7 +183,7 @@ def create_circular_calendar(year=2025, start_date=None, current_date=None):
             ax.plot([x1, x2], [y1, y2], color='#00CC00', linestyle='-', linewidth=1)
     
     # Add title
-    plt.title('13-Month Circular Calendar', color=month_label_color, fontsize=20, pad=20)
+    # plt.title('13-Month Circular Calendar', color=month_label_color, fontsize=20, pad=20)
     
     # Set limits and remove axes
     ax.set_xlim(-outer_radius-3, outer_radius+3)
@@ -256,26 +256,27 @@ def monday_closest_to_jan1():
 # plt.show()
 
 # Streamlit app
-st.set_page_config(page_title="13-Month Calendar", layout="wide")
+st.set_page_config(page_title="The Dalendar", layout="wide")
 st.title(f"The Dalendar for {datetime.datetime.now().year}")
 
 # Add some interactive controls
 col1, col2 = st.columns([1, 3])
 
-with col1:
-    year = st.number_input("Year", min_value=2020, max_value=2030, value=2025)
-    today = datetime.date.today()
-    use_today = st.checkbox("Use today's date", value=True)
+# with col1:
+    # year = st.number_input("Year", min_value=2020, max_value=2030, value=2025)
+    # today = datetime.date.today()
+    # use_today = st.checkbox("Use today's date", value=True)
     
-    if not use_today:
-        month = st.selectbox("Month", range(1, 13), today.month - 1)
-        day = st.selectbox("Day", range(1, 32), min(today.day - 1, 30))
-        selected_date = datetime.date(year, month, day)
-    else:
-        selected_date = today
+    # if not use_today:
+    #     month = st.selectbox("Month", range(1, 13), today.month - 1)
+    #     day = st.selectbox("Day", range(1, 32), min(today.day - 1, 30))
+    #     selected_date = datetime.date(year, month, day)
+    # else:
+    #     selected_date = today
 
 # Create the calendar
-fig = create_circular_calendar(year=year, current_date=selected_date)
+today = datetime.date.today()
+fig = create_circular_calendar(year=today.year, current_date=today, figsize=(6,6))
 
 # Display the calendar
 with col2:

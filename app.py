@@ -12,13 +12,18 @@ import numpy as np
 import datetime
 from matplotlib.patches import Wedge, Circle, Rectangle
 import calendar
-import pytz  # For timezone handling
+import pandas as pd
 
 def get_today_central():
-    """Get the current date in US Central timezone."""
-    central = pytz.timezone('US/Central')
-    now = datetime.datetime.now(central)
-    return now.date()
+    """Get the current date in US Central timezone using pandas."""
+    # Create a timestamp in UTC
+    now_utc = pd.Timestamp.now(tz='UTC')
+    
+    # Convert to US Central timezone
+    now_central = now_utc.tz_convert('US/Central')
+    
+    # Extract date only (no time component)
+    return now_central.date()
 
 def is_leap_day(date):
     """Check if a date is February 29 (leap day)."""

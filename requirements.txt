@@ -1,6 +1,4 @@
 matplotlib
 streamlit
-calendar
 pandas
-datetime
 numpy

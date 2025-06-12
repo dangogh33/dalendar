@@ -52,7 +52,7 @@ def calculate_weeks_needed(year, start_date=None):
     
     return weeks_needed
 
-def create_circular_calendar(year=2025, start_date=None, current_date=None, figsize=(14,14)):
+def create_circular_calendar(year=2025, start_date=None, current_date=None, highlight_dates=None, figsize=(14,14)):
     # If no start_date provided, use Monday on or before January 1st
     if start_date is None:
         jan1 = datetime.date(year, 1, 1)
@@ -63,6 +63,17 @@ def create_circular_calendar(year=2025, start_date=None, current_date=None, figs
     if current_date is None:
         current_date = get_today_central()
     
+    # Parse highlight_dates if provided
+    parsed_highlight_dates = []
+    if highlight_dates:
+        for date_str in highlight_dates:
+            try:
+                parsed_date = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
+                parsed_highlight_dates.append(parsed_date)
+            except ValueError:
+                # Skip invalid date strings
+                continue
+    
     # Colors
     bg_color = 'black'
     completed_color = '#00FF00'  # Bright green
@@ -70,6 +81,7 @@ def create_circular_calendar(year=2025, start_date=None, current_date=None, figs
     outline_color = '#006600'    # Darker green
     month_label_color = '#00AA00'  # Medium green
     trad_month_color = '#00FFAA'  # Brighter green for traditional month outlines
+    highlight_color = '#FF0000'   # Red for highlighted dates
     
     # Create figure
     fig, ax = plt.subplots(figsize=figsize, facecolor=bg_color)
@@ -156,10 +168,17 @@ def create_circular_calendar(year=2025, start_date=None, current_date=None, figs
                 else:
                     color = bg_color         # Future day (black)
             
+            # Determine edge color and width for highlighting
+            edge_color = outline_color
+            edge_width = 0.5
+            if day_date in parsed_highlight_dates:
+                edge_color = highlight_color
+                edge_width = 3.0
+            
             # Create wedge for this day
             wedge = Wedge((0, 0), day_outer_radius, week_end_angle, week_start_angle, 
                           width=day_radius_width, facecolor=color, 
-                          edgecolor=outline_color, linewidth=0.5)
+                          edgecolor=edge_color, linewidth=edge_width)
             ax.add_patch(wedge)
     
     # Draw traditional month ticks and labels (moved to be between ticks)
@@ -353,7 +372,7 @@ _, col2, _ = st.columns([1, 3, 1])
 
 # Create the calendar
 today = get_today_central()
-fig = create_circular_calendar(year=today.year, start_date=monday_closest_to_jan1(today.year), current_date=today, figsize=(12,12))
+fig = create_circular_calendar(year=today.year, start_date=monday_closest_to_jan1(today.year), current_date=today, figsize=(12,12), highlight_dates=['2025-10-05'])
 
 # Display the calendar
 with col2:
